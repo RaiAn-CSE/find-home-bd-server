@@ -13,8 +13,15 @@ app.use(express.json());
 
 
 
-const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster0.3exxtfz.mongodb.net/?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster0.yce8pf3.mongodb.net/?retryWrites=true&w=majority`;
+const client = new MongoClient(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverApi: ServerApiVersion.v1,
+});
+
+// const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster0.3exxtfz.mongodb.net/?retryWrites=true&w=majority`;
+// const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
 
@@ -24,11 +31,21 @@ async function run() {
         const products = client.db('rentUsBd').collection('productCollection');
 
         // get data from server:
+        // app.get('/productCollection', async (req, res) => {
+        //     const query = {}
+        //     const result = await products.find(query).toArray().sort({ _id: -1 });;
+        //     res.send(result);
+        // });
+
         app.get('/productCollection', async (req, res) => {
             const query = {}
-            const result = await products.find(query).toArray();
+            const sortProduct = products.find(query).sort({ _id: -1 });;
+            const result = await sortProduct.toArray();
             res.send(result);
         });
+
+
+
         app.post('/productCollection', async (req, res) => {
             const user = req.body;
             // console.log(user);
