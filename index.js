@@ -31,11 +31,6 @@ async function run() {
         const products = client.db('rentUsBd').collection('productCollection');
 
         // get data from server:
-        // app.get('/productCollection', async (req, res) => {
-        //     const query = {}
-        //     const result = await products.find(query).toArray().sort({ _id: -1 });;
-        //     res.send(result);
-        // });
 
         app.get('/productCollection', async (req, res) => {
             const query = {}
@@ -43,7 +38,6 @@ async function run() {
             const result = await sortProduct.toArray();
             res.send(result);
         });
-
 
 
         app.post('/productCollection', async (req, res) => {
