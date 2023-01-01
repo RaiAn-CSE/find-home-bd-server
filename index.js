@@ -56,6 +56,13 @@ async function run() {
             res.send(result);
         });
 
+        // Get Users From Database:
+        app.get('/users', async (req, res) => {
+            const query = {};
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        });
+
     }
     finally {
 
