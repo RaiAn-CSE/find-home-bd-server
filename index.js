@@ -29,6 +29,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         const products = client.db('rentUsBd').collection('productCollection');
+        const usersCollection = client.db('rentUsBd').collection('users');
 
         // get data from server:
 
@@ -46,6 +47,15 @@ async function run() {
             const result = await products.insertOne(user);
             res.send(result);
         });
+
+        // User Information Post in Database :
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            // console.log(user);
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
+
     }
     finally {
 
