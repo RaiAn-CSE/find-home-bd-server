@@ -33,10 +33,43 @@ async function run() {
 
         // get data from server:
         app.get('/productCollection', async (req, res) => {
-            const query = {}
-            const sortProduct = products.find(query).sort({ _id: -1 });;
-            const result = await sortProduct.toArray();
-            res.send(result);
+            console.log(req.query);
+            const query = req.query;
+            if (Object.keys(query).length) {
+                let price = query.price;
+                if (price == 'Low to High') {
+                    price = 1
+                } else {
+                    price = -1
+                }
+                const city = query.city;
+                const month = query.month;
+                const rentType = query.rentType.split(',');
+                const bedAmountStr = query.bedAmount.split(',');
+                const bedAmount = bedAmountStr.map(bed => parseInt(bed))
+                const washAmountStr = query.washAmount.split(',');
+                const washAmount = washAmountStr.map(wash => parseInt(wash))
+
+                console.log(rentType);
+                console.log(bedAmount);
+                console.log(washAmount);
+                const findProducts = products.find({
+                    city: city,
+                    month: month,
+                    category: { $in: rentType },
+                    room: { $in: bedAmount },
+                    bath: { $in: washAmount },
+                }).sort({ rent: price })
+                const result = await findProducts.toArray();
+                console.log("result", result);
+                res.send(result);
+
+            } else {
+                const sortProduct = products.find(query).sort({ _id: -1 });;
+                const result = await sortProduct.toArray();
+                res.send(result);
+            }
+
         });
 
 
