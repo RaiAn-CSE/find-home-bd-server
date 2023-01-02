@@ -32,7 +32,6 @@ async function run() {
         const usersCollection = client.db('rentUsBd').collection('users');
 
         // get data from server:
-
         app.get('/productCollection', async (req, res) => {
             const query = {}
             const sortProduct = products.find(query).sort({ _id: -1 });;
@@ -61,6 +60,58 @@ async function run() {
             const query = {};
             const users = await usersCollection.find(query).toArray();
             res.send(users);
+        });
+
+
+        // Get Who is Admin : 
+        app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.role === 'admin' });
+        });
+
+
+        // Get Who is Seller : 
+        app.get('/users/seller/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            res.send({ isSeller: user?.role === 'seller' });
+        });
+
+
+
+
+        app.get('/dashboard/allsellers', async (req, res) => {
+            const role = req.query.role;
+            console.log(req.query.role);
+            const users = await usersCollection.find({}).toArray()
+            const result = users.filter(product => product.role === role)
+            console.log("jsx".result);
+            res.send(result)
+
+        })
+
+        app.get('/dashboard/allbuyers', async (req, res) => {
+            const role = req.query.role;
+            console.log(req.query.role);
+            const users = await usersCollection.find({}).toArray()
+            const result = users.filter(product => product.role === role)
+            console.log("jsx".result);
+            res.send(result)
+
+        });
+
+
+        // Delete Users :
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id
+            console.log(id)
+            const query = { _id: ObjectId(id) }
+            const result = await usersCollection.deleteOne(query)
+            console.log(result)
+            res.send(result)
         });
 
     }
