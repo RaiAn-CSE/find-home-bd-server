@@ -20,10 +20,6 @@ const client = new MongoClient(uri, {
     serverApi: ServerApiVersion.v1,
 });
 
-// const uri = `mongodb+srv://${process.env.db_user}:${process.env.db_pass}@cluster0.3exxtfz.mongodb.net/?retryWrites=true&w=majority`;
-// const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
-
-
 
 
 async function run() {
@@ -71,6 +67,48 @@ async function run() {
             }
 
         });
+
+        app.get("/allProducts", async (req, res) => {
+            const query = {}
+            const product = await products.find(query).toArray()
+            res.send(product)
+        })
+
+
+        app.get('/products', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            console.log(query);
+            const product = products.find(query);
+            const findProduct = await product.toArray()
+            console.log(findProduct);
+            res.send(findProduct);
+        });
+
+        app.get('/sortProducts', async (req, res) => {
+            const city = req.query.city;
+            const area = req.query.area;
+            const rent = req.query.rent;
+
+
+            console.log(city, area, rent);
+            const sortProducts = products.find({
+                city: city,
+                area: area,
+                category: rent
+            })
+            // console.log(sortProducts);
+            const result = await sortProducts.toArray()
+            console.log(result);
+            res.send(result)
+        })
+
+        app.get("/categoryWiseData", async (req, res) => {
+            const title = req.query.title;
+            const find = await products.find({ category: title }).toArray()
+            console.log("category", find);
+            res.send(find)
+        })
 
 
         app.post('/productCollection', async (req, res) => {
@@ -145,6 +183,34 @@ async function run() {
             const result = await usersCollection.deleteOne(query)
             console.log(result)
             res.send(result)
+        });
+
+
+        // Get Products Collection in UI :
+        app.get('/products', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            console.log(query);
+            const product = await products.find(query).toArray();
+            console.log(product);
+            res.send(product);
+        });
+
+        // Products Collection From UI and database :
+        app.delete('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await products.deleteOne(filter);
+            res.send(result);
+        });
+
+
+
+        app.get('/details/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const service = await products.findOne(query);
+            res.send(service);
         });
 
     }
