@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
@@ -9,7 +10,9 @@ const app = express();
 
 // middleware
 app.use(cors());
+// app.use(multer());
 app.use(express.json());
+
 
 
 
@@ -26,6 +29,7 @@ async function run() {
     try {
         const products = client.db('rentUsBd').collection('productCollection');
         const usersCollection = client.db('rentUsBd').collection('users');
+        const feedbackData = client.db('rentUsBd').collection('feedback');
 
         // get data from server:
         app.get('/productCollection', async (req, res) => {
@@ -153,7 +157,6 @@ async function run() {
 
 
 
-
         app.get('/dashboard/allsellers', async (req, res) => {
             const role = req.query.role;
             console.log(req.query.role);
@@ -196,7 +199,7 @@ async function run() {
             res.send(product);
         });
 
-        // Products Collection From UI and database :
+
         app.delete('/products/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
@@ -211,6 +214,29 @@ async function run() {
             const query = { _id: ObjectId(id) };
             const service = await products.findOne(query);
             res.send(service);
+        });
+
+        // Post Feedback Data
+        app.post('/feedback', async (req, res) => {
+            const feedback = req.body;
+            console.log(feedback);
+            const result = await feedbackData.insertOne(feedback);
+            res.send(result);
+        });
+
+        // Get Feedback Data
+        app.get('/feedback', async (req, res) => {
+            const query = {};
+            const result = await feedbackData.find(query).toArray();
+            res.send(result);
+        });
+
+        // Delete Feedback Data
+        app.delete('/feedback/:id', async (req, res) => {
+            const id = req.params.id;
+            const filteredFeedback = { _id: ObjectId(id) };
+            const result = await feedbackData.deleteOne(filteredFeedback);
+            res.send(result);
         });
 
     }
