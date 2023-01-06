@@ -256,60 +256,72 @@ async function run() {
             res.send(result);
         });
 
-        app.post("/conversations", async (req, res, next) => {
+        app.post("/conversations", async (req, res) => {
             try {
-                const {senderEmail, receiverEmail, propertyId} = req.body || {};
-
-                if (!(senderEmail && receiverEmail && propertyId)) {
-                    return res.status(400).json({
-                        error: "Missing required data!",
-                        fields: ["senderEmail", "receiverEmail", "propertyId"]
-                    });
-                }
-
-                const senderUser =
-                    (await usersCollection.findOne({email: senderEmail})) || {};
-                const receiverUser =
-                    (await usersCollection.findOne({email: receiverEmail})) || {};
-
-                if (!(senderUser && receiverUser)) {
-                    return res.status(400).json({error: "Could not find users!"});
-                }
-
-                const {insertedId} = await ConversationCollection.insertOne({
-                    participants: [
-                        {name: senderUser?.name, email: senderUser?.email},
-                        {name: receiverUser?.name, email: receiverUser?.email},
-                    ],
-                    propertyId,
-                    createdBy: senderUser?.email,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                }) || {};
-                const conversation = await ConversationCollection.findOne({_id: insertedId})
-
-                res.status(200).json({
-                    conversation,
-                    message: !!conversation
-                        ? "Successfully Created"
-                        : "Could not create conversation!",
-                    success: !!conversation,
-                });
-            } catch (err) {
-                res.status(500).json({error: err.message});
-            }
-        });
-
-        app.get("/conversations/:propertyId/:email", async (req, res) => {
-            try {
-                if (!(req?.params?.email && req?.params?.propertyId)) {
+                const {email, propertyId} = req?.body || {};
+                if (!(email && propertyId)) {
                     return res.status(400).json({error: "Missing required params!", fields: ["email", "propertyId"]})
                 }
 
-                const conversations = await ConversationCollection.find({
-                    "participants.email": req.params.email,
-                    propertyId: req.params.propertyId
-                }).toArray();
+                const property = await products.findOne({_id: ObjectId(propertyId)}) || {};
+                if (!property?._id) {
+                    return res.status(404).json({error: "Could not find property!", fields: ["email", "propertyId"]})
+                }
+
+                const isPropertyOwner = !!(property?.email === email)
+                if (!isPropertyOwner) {
+                    const conversation = await ConversationCollection.findOne({
+                        "participants.email": email,
+                        propertyId: ObjectId(propertyId)
+                    });
+
+                    if (!conversation?._id) {
+                        const {name: propertyOwner, email: receiverEmail} = property || {};
+                        if (!(receiverEmail && propertyOwner)) {
+                            return res.status(404).json({
+                                error: "Could not find property info!",
+                                fields: ["receiverEmail", "propertyOwner"]
+                            });
+                        }
+
+                        const senderUser =
+                            (await usersCollection.findOne({email})) || {};
+                        if (!senderUser?._id) {
+                            return res.status(404).json({error: "Could not find sender user!"});
+                        }
+
+                        const {insertedId} = await ConversationCollection.insertOne({
+                            participants: [
+                                {name: senderUser?.name, email: senderUser?.email},
+                                {name: propertyOwner, email: receiverEmail},
+                            ],
+                            propertyId: ObjectId(propertyId),
+                            createdBy: senderUser?.email,
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                        }) || {};
+                        if (!insertedId) {
+                            return res.status(500).json({error: "Could not create conversation!"});
+                        }
+                    }
+                }
+
+                const conversations = await ConversationCollection.aggregate([
+                    {
+                        $match: {
+                            "participants.email": email,
+                            propertyId: ObjectId(propertyId)
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "conversation-messages",
+                            localField: "_id",
+                            foreignField: "conversationId",
+                            as: "conversationMessages"
+                        }
+                    }
+                ]).toArray()
 
                 res.status(200).json({
                     count: conversations?.length,
@@ -364,14 +376,14 @@ async function run() {
 
                 const conversation =
                     (await ConversationCollection.findOne({
-                        _id: conversationId,
+                        _id: ObjectId(conversationId),
                     })) || {};
-                if (!conversation) {
+                if (!conversation?._id) {
                     return res.status(400).json({error: "Could not find conversation!"});
                 }
 
                 const {insertedId} = await ConversationMessageCollection.insertOne({
-                    conversationId,
+                    conversationId: ObjectId(conversationId),
                     message,
                     createdBy: senderUser?.email,
                     createdAt: new Date(),
