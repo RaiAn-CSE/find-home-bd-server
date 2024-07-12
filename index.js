@@ -126,6 +126,7 @@ async function run() {
         }
         const city = query.city;
         const month = query.month;
+        const area = query.area;
         const rentType = query.rentType.split(",");
         const bedAmountStr = query.bedAmount.split(",");
         const bedAmount = bedAmountStr.map((bed) => parseInt(bed));
@@ -135,6 +136,7 @@ async function run() {
         const findProducts = products
           .find({
             city: city,
+            area: area,
             month: month,
             category: { $in: rentType },
             room: { $in: bedAmount },
@@ -168,6 +170,8 @@ async function run() {
       const city = req.query.city;
       const area = req.query.area;
       const rent = req.query.rent;
+
+      console.log(city, area, rent);
 
       const sortProducts = products.find({
         city: city,
