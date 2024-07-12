@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const SSLCommerzPayment = require('sslcommerz-lts')
 const multer = require("multer");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
@@ -19,6 +20,10 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+
+const store_id = process.env.storeID;
+const store_passwd = process.env.storePassword;
+const is_live = false //true for live, false for sandbox
 
 async function run() {
   try {
@@ -55,9 +60,62 @@ async function run() {
       "conversation-messages"
     );
 
+
+
+    const tran_id = new ObjectId().toString();
+
+    app.post("/order", async (req, res) => {
+      const order = req.body;
+
+      const data = {
+        total_amount: order.rent,
+        currency: 'BDT',
+        tran_id: tran_id, // use unique tran_id for each api call
+        success_url: 'http://localhost:3030/success',
+        fail_url: 'http://localhost:3030/fail',
+        cancel_url: 'http://localhost:3030/cancel',
+        ipn_url: 'http://localhost:3030/ipn',
+        shipping_method: 'Courier',
+        product_name: 'Computer.',
+        product_category: 'Electronic',
+        product_profile: 'general',
+        cus_name: order.name,
+        cus_email: order.email,
+        cus_add1: order.address,
+        cus_add2: 'Dhaka',
+        cus_city: 'Dhaka',
+        cus_state: 'Dhaka',
+        cus_postcode: '1000',
+        cus_country: 'Bangladesh',
+        cus_phone: order.phone,
+        cus_fax: '01711111111',
+        ship_name: 'Customer Name',
+        ship_add1: 'Dhaka',
+        ship_add2: 'Dhaka',
+        ship_city: 'Dhaka',
+        ship_state: 'Dhaka',
+        ship_postcode: 1000,
+        ship_country: 'Bangladesh',
+      };
+
+
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+      sslcz.init(data).then(apiResponse => {
+        // Redirect the user to payment gateway
+        let GatewayPageURL = apiResponse.GatewayPageURL
+        res.send({ url: GatewayPageURL })
+      });
+    });
+
+
+
+
+
+
+
+
     // get data from server:
     app.get("/productCollection", async (req, res) => {
-      console.log(req.query);
       const query = req.query;
       if (Object.keys(query).length) {
         let price = query.price;
@@ -74,9 +132,6 @@ async function run() {
         const washAmountStr = query.washAmount.split(",");
         const washAmount = washAmountStr.map((wash) => parseInt(wash));
 
-        console.log(rentType);
-        console.log(bedAmount);
-        console.log(washAmount);
         const findProducts = products
           .find({
             city: city,
@@ -87,7 +142,6 @@ async function run() {
           })
           .sort({ rent: price });
         const result = await findProducts.toArray();
-        console.log("result", result);
         res.send(result);
       } else {
         const sortProduct = products.find(query).sort({ _id: -1 });
@@ -105,10 +159,8 @@ async function run() {
     app.get("/products", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
-      console.log(query);
       const product = products.find(query);
       const findProduct = await product.toArray();
-      console.log(findProduct);
       res.send(findProduct);
     });
 
@@ -117,28 +169,23 @@ async function run() {
       const area = req.query.area;
       const rent = req.query.rent;
 
-      console.log(city, area, rent);
       const sortProducts = products.find({
         city: city,
         area: area,
         category: rent,
       });
-      // console.log(sortProducts);
       const result = await sortProducts.toArray();
-      console.log(result);
       res.send(result);
     });
 
     app.get("/categoryWiseData", async (req, res) => {
       const title = req.query.title;
       const find = await products.find({ category: title }).toArray();
-      console.log("category", find);
       res.send(find);
     });
 
     app.post("/productCollection", async (req, res) => {
       const user = req.body;
-      // console.log(user);
       const result = await products.insertOne(user);
       res.send(result);
     });
@@ -146,7 +193,6 @@ async function run() {
     // User Information Post in Database :
     app.post("/users", async (req, res) => {
       const user = req.body;
-      // console.log(user);
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
@@ -183,47 +229,103 @@ async function run() {
 
     app.get("/dashboard/allsellers", async (req, res) => {
       const role = req.query.role;
-      console.log(req.query.role);
       const users = await usersCollection.find({}).toArray();
       const result = users.filter((product) => product.role === role);
-      console.log("jsx".result);
       res.send(result);
     });
 
     app.get("/dashboard/allbuyers", async (req, res) => {
       const role = req.query.role;
-      console.log(req.query.role);
       const users = await usersCollection.find({}).toArray();
       const result = users.filter((product) => product.role === role);
-      console.log("jsx".result);
       res.send(result);
     });
 
     // Delete Users :
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      console.log(id);
       const query = { _id: ObjectId(id) };
       const result = await usersCollection.deleteOne(query);
-      console.log(result);
       res.send(result);
     });
 
-    // Get Products Collection in UI :
-    app.get("/products", async (req, res) => {
+
+
+
+
+
+
+
+
+
+    // app.get("/products", async (req, res) => {
+    //   const email = req.query.email;
+    //   const query = { email: email };
+    //   const product = await products.find(query).toArray();
+    //   res.send(product);
+    // });
+
+    // app.delete('/products/:id', async (req, res) => {
+    //   const id = req.params.id;
+    //   const filter = { _id: ObjectId(id) };
+    //   const result = await products.deleteOne(filter);
+    //   res.send(result);
+    // });
+
+    // app.patch('/products/:id', async (req, res) => {
+    //   try {
+    //     const id = req.params.id;
+    //     const filter = { _id: ObjectId(id) };
+    //     const updateHome = await products.findByIdAndUpdate(filter, req.body, { new: true });
+    //     res.send(updateHome);
+    //   } catch (error) {
+    //     res.status(404).send(error);
+    //   }
+    // });
+
+
+
+
+
+
+
+
+
+    // House rent post details :
+    app.get('/products', async (req, res) => {
       const email = req.query.email;
-      const query = { email: email };
-      console.log(query);
-      const product = await products.find(query).toArray();
-      console.log(product);
-      res.send(product);
+      try {
+        const products = await products.find({ email }).toArray();
+        res.send(products);
+      } catch (error) {
+        res.status(500).send(error);
+      }
     });
 
-    app.delete("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
-      const result = await products.deleteOne(filter);
-      res.send(result);
+    app.delete('/products/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const filter = { _id: ObjectId(id) };
+        const result = await products.deleteOne(filter);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send(error);
+      }
+    });
+
+    app.put('/products/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updateData = req.body;
+        const filter = { _id: ObjectId(id) };
+        const updateDoc = {
+          $set: updateData,
+        };
+        const result = await products.updateOne(filter, updateDoc);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send(error);
+      }
     });
 
     app.get("/details/:id", async (req, res) => {
@@ -236,7 +338,6 @@ async function run() {
     // Post Feedback Data
     app.post("/feedback", async (req, res) => {
       const feedback = req.body;
-      console.log(feedback);
       const result = await feedbackData.insertOne(feedback);
       res.send(result);
     });
@@ -244,7 +345,7 @@ async function run() {
     // Get Feedback Data
     app.get("/feedback", async (req, res) => {
       const query = {};
-      const result = await feedbackData.find(query).toArray();
+      const result = await feedbackData.find(query).sort({ _id: -1 }).toArray();
       res.send(result);
     });
 
